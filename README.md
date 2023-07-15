@@ -15,9 +15,15 @@ primary_branch: main
 managed_services: klipper
 ```
 
-Once this is done, you'll end up with a `voron-config` directory in your printer root, which you can then symlink
+Once this is done, you'll end up with a `voron-config` directory in your printer root, from which you can then symlink
 to the `printer_data/config` directory. This should ensure that you consistently have the most recent config available
 for your printer.
+
+```bash
+cp /home/printer_data/config/mainsail.cfg /home/voron-config/v2/klipper/mainsail.cfg
+mv -R /home/printer_data/config /home/printer_data/config.bak
+ln -s /printing/voron-config/v2/klipper /home/printer_data/config
+```
 
 ## Details
 

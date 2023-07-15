@@ -1,0 +1,23 @@
+# This file contains CAN network configuration which will be applied by
+# systemd-networking for any CAN networks on the system. It ensures that
+# the CAN interface is brought up with the correct bitrate and that the
+# transmit queue length is set to a high value to avoid dropped frames.
+#
+# We also set RequiredForOnline=no to ensure that the CAN interface is
+# not required for the system to be considered online. This is because
+# the CAN interface is not always available, and we don't want to block
+# the system from booting fully if it is not available (particularly useful
+# when debugging CAN issues).
+#
+# This file should be placed in /etc/systemd/network/80-can.network
+
+[Match]
+Name=can*
+
+[CAN]
+BitRate=1000000
+RestartSec=500ms
+
+[Link]
+TransmitQueueLength=1024
+RequiredForOnline=no

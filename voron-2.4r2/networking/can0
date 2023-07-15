@@ -1,0 +1,14 @@
+# This file contains the can0 network interface configuration. It mirrors
+# the configuration found in the systemd-network file and forces the same
+# bitrate and restart-ms values. This is necessary because the systemd-network
+# might not be installed/configured on your system.
+#
+# This file should be placed in /etc/network/interfaces.d/
+
+allow-hotplug can0
+iface can0 can static
+    bitrate 1000000
+    up ip link set $IFACE down
+    up ifconfig $IFACE txqueuelen 1024
+    up ip link set $IFACE type can bitrate 1000000 restart-ms 500
+    up ip link set $IFACE up

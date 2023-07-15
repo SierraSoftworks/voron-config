@@ -34,6 +34,7 @@ This configuration assumes that your build reflects my own, including the follow
  - BigTreeTech Pi v1.4 + U2C v1.0
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB2240 v1.0
+ - BigTreeTech Smart Filament Sensor v1.1
  - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
@@ -52,6 +53,8 @@ This configuration assumes that your build reflects my own, including the follow
  - Configuring the EBB2240 firmware to enable the `PA0` GPIO pin at startup (FAN1/heater fan) so that restarts don't run the risk of overheating the hotend.
 
  - Nevermore v6 connected to FAN4 on the Octopus (with jumpers set to 12V supply for Sunon Maglev 5015 fans).
+
+ - Smart Filament Sensor connected to the `DIAG_7` port on the Octopus.
 
 ### Host Configuration
 The BigTreeTech Pi starts off running the stock CB1 image, which I have then reconfigured

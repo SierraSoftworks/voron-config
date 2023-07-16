@@ -56,6 +56,8 @@ This configuration assumes that your build reflects my own, including the follow
 
  - Smart Filament Sensor connected to the `DIAG_7` port on the Octopus.
 
+ - Chamber thermistor attached to `T0` on the Octopus (replacing the original hotend thermistor port).
+
 ### Host Configuration
 The BigTreeTech Pi starts off running the stock CB1 image, which I have then reconfigured
 fairly substantially. This includes at least the following:

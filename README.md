@@ -20,9 +20,8 @@ to the `printer_data/config` directory. This should ensure that you consistently
 for your printer.
 
 ```bash
-cp /home/printer_data/config/mainsail.cfg /home/voron-config/v2/klipper/mainsail.cfg
-mv -R /home/printer_data/config /home/printer_data/config.bak
-ln -s /printing/voron-config/v2/klipper /home/printer_data/config
+git clone https://github.com/SierraSoftworks/voron-config /printing/voron-config
+/printing/voron-config/scripts/install.sh
 ```
 
 ## Details

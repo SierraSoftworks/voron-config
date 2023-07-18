@@ -1,0 +1,7 @@
+[include mainsail.cfg]
+
+[include controllers/_index.cfg]
+[include display/_index.cfg]
+[include effectors/_index.cfg]
+[include features/_index.cfg]
+[include macros/_index.cfg]

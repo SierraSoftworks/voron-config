@@ -19,6 +19,10 @@ if [ ! -L "$CONFIG_DIR" ]; then
     if [ -d "$CONFIG_DIR" ]; then
         mv "$CONFIG_DIR" "${CONFIG_DIR}_backup"
     fi
-    
+
     ln -s "$SOURCE_DIR/v2/klipper" "$CONFIG_DIR"
+fi
+
+if [ ! -f "$SOURCE_DIR/v2/klipper/printer.cfg" ]; then
+    cp "$SOURCE_DIR/v2/klipper/printer.cfg.example" "$SOURCE_DIR/v2/klipper/printer.cfg"
 fi

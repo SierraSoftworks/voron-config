@@ -13,6 +13,13 @@ if [ -d "$PRINTING_HOME/mainsail-config" ]; then
     fi
 fi
 
+# Check if the moonraker-timelapse directory exists and hasn't (yet) been linked
+if [ -d "$PRINTING_HOME/moonraker-timelapse" ]; then
+    if [ ! -L "$SOURCE_DIR/v2/klipper/timelapse.cfg" ]; then
+        ln -s "$PRINTING_HOME/moonraker-timelapse/klipper_macro/timelapse.cfg" "$SOURCE_DIR/v2/klipper/timelapse.cfg"
+    fi
+fi
+
 # Check if the klipper config directory exists and hasn't (yet) been linked
 # if so, back it up and then replace it with a symlink
 if [ ! -L "$CONFIG_DIR" ]; then

@@ -30,10 +30,12 @@ git clone https://github.com/SierraSoftworks/voron-config /printing/voron-config
 This configuration assumes that your build reflects my own, including the following:
 
  - [Voron 2.4 R2](https://github.com/VoronDesign/Voron-2) (350mm)
- - BigTreeTech Pi v1.4 + U2C v1.0
+ - BigTreeTech Pi v1.4
+ - BigTreeTech U2C v2.1
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB2240 v1.0
  - BigTreeTech Smart Filament Sensor v1.1
+ - PT1000 (2 wire) hotend thermistor
  - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.

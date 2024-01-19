@@ -1,0 +1,3 @@
+[submodule "v2/klipper/macros/KAMP"]
+	path = v2/klipper/macros/KAMP
+	url = https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git

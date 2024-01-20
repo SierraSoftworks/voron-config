@@ -119,7 +119,7 @@ within a number of subdirectories.
  - `effectors` contains configuration files for things that influence the environment (heaters, fans, motors etc).
  - `features` contains configuration files for various Klipper features used by the system.
  - `macros` contains various custom macros used by the system.
- - `config.cfg` contains the `_CLIENT_VARIABLES` overrides used to configure the system's behaviour.
+ - `config.cfg` contains the `_ConfigurationS` overrides used to configure the system's behaviour.
  - `printer.cfg` contains the `[include]` statements for the aforementioned configs, as well as auto-generated overrides.
 
 ### Macros

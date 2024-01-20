@@ -71,6 +71,44 @@ fairly substantially. This includes at least the following:
  - Replacing NGINX with Caddy 2.0 as the reverse proxy for Mainsail, enabling the user of Tailscale+LetsEncrypt certs.
  - Setting up the `can0` network interface and configuring `systemd-network` to manage it.
 
+### Klipper Firmware Configuration
+To setup the Klipper firmware, you'll need to compile it for each of the boards in your system.
+You do this by running `make menuconfig` and then selecting the following options (once saved,
+you can run `make` to compile the firmware which will be placed in `out/klipper.bin`).
+
+#### BTT Octopus
+ - Enable extra low-level configuration options
+ - Micro-processor architecture: `STM32`
+ - Processor model: `STM32F446`
+ - Bootloader offset: `32KiB`
+ - Clock Reference: `12 MHz crystal`
+ - Communication interface: `USB on PA11/PA12`
+ - GPIO pins to set at micro-controller startup: `PB11`
+
+ Once the firmware is built, place it on the SD card with the filename `firmware.bin` and insert it into the Octopus.
+ A power cycle should then cause the Octopus to flash the firmware and reboot, at which point the firmware file will be
+ renamed to `firmware.cur`.
+
+#### BTT EBB2240
+ - Enable extra low-level configuration options
+ - Micro-processor architecture: `STM32`
+ - Processor model: `STM32G0B1`
+ - Bootloader offset: `8KiB`
+ - Clock Reference: `8 MHz crystal`
+ - Communication interface: `CAN bus on PB0/PB1`
+ - CAN bus speed: `1 Mbit/s` (1000000)
+ - GPIO pins to set at micro-controller startup: `PA0`
+
+Once the firmware is built, flash it using the CANboot tooling by running the following command:
+
+```bash
+cd /printing/canboot/scripts
+python3 flash_can.py -i can0 -q # Get the CAN ID of the EBB2240
+
+# Once you have the ID, run the following command to flash the firmware (with the ID replaced if needed)
+python3 ./flash_can.py -i can0 -f /printing/klipper/out/klipper.bin -u 9cf9505f7c7c
+```
+
 ### Klipper Configuration
 My Klipper configuration draws on a number of sources and integrates these into
 a series of `[include]` statements, using a `_index.cfg` file to manage includes

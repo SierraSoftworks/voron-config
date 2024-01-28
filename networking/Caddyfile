@@ -5,27 +5,41 @@ encode gzip
 
 # Forward requests to the API server
 @api {
-    path /access/* || /api/* || /machine/* || /printer/* || /server/*
+        path /access/* || /api/* || /machine/* || /printer/* || /server/*
 }
 handle @api {
-    reverse_proxy http://localhost:7125
+        reverse_proxy http://localhost:7125
 }
 
 handle /websocket {
-    reverse_proxy http://localhost:7125 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-    }
+        reverse_proxy http://localhost:7125 {
+                header_up Host {host}
+                header_up X-Real-IP {remote_host}
+        }
 }
 
-handle_path /webcam/* {
-    reverse_proxy http://localhost:8080
+handle_path /webca* {
+        reverse_proxy http://localhost:8080
+}
+
+handle /spoolma* {
+        reverse_proxy http://localhost:7912
+}
+
+handle /fluidd {
+        root * /printing/fluidd
+
+        # Disable caching of the index.html file
+        header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
+
+        try_files {path} {path}/ /index.html
+        file_server
 }
 
 handle * {
-    # Disable caching of the index.html file
-    header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
-    
-    try_files {path} {path}/ /index.html
-    file_server
+        # Disable caching of the index.html file
+        header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
+
+        try_files {path} {path}/ /index.html
+        file_server
 }

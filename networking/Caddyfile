@@ -18,22 +18,8 @@ handle /websocket {
         }
 }
 
-handle_path /webca* {
+handle_path /webcam/* {
         reverse_proxy http://localhost:8080
-}
-
-handle /spoolma* {
-        reverse_proxy http://localhost:7912
-}
-
-handle /fluidd {
-        root * /printing/fluidd
-
-        # Disable caching of the index.html file
-        header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
-
-        try_files {path} {path}/ /index.html
-        file_server
 }
 
 handle * {

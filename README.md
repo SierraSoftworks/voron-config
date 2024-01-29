@@ -125,3 +125,35 @@ within a number of subdirectories.
 ### Macros
  - `NEVERMORE SPEED=[0..1]` turns on the Nevermore at the requested speed (and resets any shutdown delay).
  - `NEVERMORE_OFF_AFTER SECONDS=900` turns off the Nevermore after the requested number of seconds (using delayed gcode).
+
+### Post Installation Printer Setup
+
+#### PID Tuning
+Once you've configured your printer, you'll need to tune the PID values for your hotend and bed.
+You can do this using the following commands:
+
+```
+G28 # Home the printer
+G0 X175 Y175 # Move to the center of the bed
+G0 Z10 # Move the nozzle to 10mm above the bed
+
+# Tune the bed PID at 110C
+PID_CALIBRATE HEATER=heater_bed TARGET=110
+
+# Tune the hotend PID at 250C (make sure you have an appropriate filament loaded, like ABS/ASA)
+PID_CALIBRATE HEATER=extruder TARGET=250
+```
+
+#### Probe Calibration
+Ensure that the probe has been correctly calibrated and the corresponding z_offset has been set in the Klipper config.
+You can do this using the following commands:
+
+```
+G28 # Home the printer
+G0 X175 Y175 # Move to the center of the bed
+PROBE_CALIBRATE # Run the probe calibration routine
+SAVE_CONFIG # Save the new z_offset value
+```
+
+#### Input Shaper Tuning
+Once you've configured 

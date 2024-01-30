@@ -7,3 +7,18 @@
 [include effectors/_index.cfg]
 [include features/_index.cfg]
 [include macros/_index.cfg]
+
+[probe]
+z_offset: 0
+
+[extruder]
+control: pid
+pid_kp: 31.182
+pid_ki: 1.823
+pid_kd: 133.305
+
+[heater_bed]
+control: pid
+pid_kp: 47.973
+pid_ki: 2.206
+pid_kd: 260.855

@@ -1,0 +1,351 @@
+# To limit exposure to denial of service attacks, change the host in endpoints below from 0.0.0.0 to a specific network interface.
+# See https://github.com/open-telemetry/opentelemetry-collector/blob/main/docs/security-best-practices.md#safeguards-against-denial-of-service-attacks
+
+extensions:
+  file_storage:
+  health_check:
+
+  basicauth/grafana/loki:
+    client_auth:
+      username: <USERNAME>
+      password: <PASSWORD>
+  basicauth/grafana/prometheus:
+    client_auth:
+      username: <USERNAME>
+      password: <PASSWORD>
+  basicauth/grafana/otlp:
+    client_auth:
+      username: <USERNAME>
+      password: <PASSWORD>
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4317
+      http:
+        endpoint: 127.0.0.1:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+      - job_name: 'integrations/caddy'
+        scrape_interval: 1m
+        static_configs:
+        - targets: ['127.0.0.1:2019']
+        relabel_configs:
+        - replacement: 'voron'
+          target_label: instance
+        metric_relabel_configs:
+        - action: keep
+          regex: caddy_http_request_duration_seconds_bucket|caddy_http_request_duration_seconds_count|caddy_http_requests_in_flight|caddy_http_requests_total
+          source_labels:
+          - __name__
+
+  journald:
+    #directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - ssh
+      - sudo
+      - systemd
+      - tailscaled
+      - caddy
+      - klipper
+      - moonraker
+      - spoolman
+      - spoolman-tailservice
+      - ustreamer
+    operators:
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+      - type: move
+        from: body.SYSLOG_IDENTIFIER
+        to: attributes["process.cmd"]
+      - type: move
+        from: body.SYSLOG_FACILITY
+        to: attributes.facility
+        if: '"SYSLOG_FACILITY" in keys(body)'
+
+      # Process Metadata
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: attributes["service.name"]
+      - type: move
+        from: body._EXE
+        to: attributes["process.exe"]
+        if: '"_EXE" in keys(body)'
+      - type: move
+        from: body._CMDLINE
+        to: attributes["process.cmdline"]
+        if: '"_CMDLINE" in keys(body)'
+      - type: move
+        from: body._PID
+        to: attributes["process.id"]
+        if: '"_PID" in keys(body)'
+      - type: move
+        from: body._UID
+        to: attributes["process.userid"]
+        if: '"_UID" in keys(body)'
+      - type: move
+        from: body._GID
+        to: attributes["process.groupid"]
+        if: '"_GID" in keys(body)'
+
+      # Cleanup unused fields
+      - type: remove
+        field: body.__CURSOR
+      - type: remove
+        field: body.PRIORITY
+      - type: remove
+        field: body.__MONOTONIC_TIMESTAMP
+      - type: remove
+        field: body.SYSLOG_TIMESTAMP
+        if: '"SYSLOG_TIMESTAMP" in keys(body)'
+      - type: remove
+        field: body._HOSTNAME
+
+      # Store extra metadata fields
+      # - type: copy
+      #   from: body
+      #   to: attributes.extra
+      # - type: remove
+      #   field: attributes.extra.MESSAGE
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+      # Application specific parsing logic
+      - type: router
+        routes:
+          - expr: 'attributes["service.name"] == "tailscaled.service" and body matches "^(Accept|Drop): "'
+            output: tailscale_netflow_parser
+          - expr: 'attributes["service.name"] == "moonraker.service" and body matches "^\\[[^:]+:[^\\]]+\\] - "'
+            output: moonraker_parser
+          - expr: 'attributes["service.name"] == "caddy.service" and body matches "^\\{"'
+            output: caddy_parser
+          - expr: 'attributes["service.name"] == "spoolman.service"'
+            output: spoolman_parser
+        default: noop
+
+      - id: tailscale_netflow_parser
+        type: regex_parser
+        parse_from: body
+        parse_to: attributes.netflow
+        regex: '^(?P<action>Accept|Drop): (?P<protocol>\w+)\{(?P<src_ip>[^:]+):(?P<src_port>\d+) > (?P<dst_ip>[^:]+):(?P<dst_port>\d+)\} (?P<packet_length>\d+) (?P<reason>.+)$'
+        output: noop
+
+      - id: caddy_parser
+        type: json_parser
+        parse_from: body
+        parse_to: attributes.details
+        severity:
+          parse_from: attributes.details.level
+          mapping:
+            fatal: fatal
+            error: error
+            warn: [warn, warning]
+            info: info
+            debug: [debug, verbose]
+      - type: add
+        field: attributes["service.name"]
+        value: caddy.service
+      - type: remove
+        field: attributes.details.ts
+      - type: remove
+        field: attributes.details.level
+      - type: move
+        from: attributes.details.logger
+        to: attributes["code.module"]
+        if: '"logger" in keys(attributes.details)'
+      - type: move
+        from: attributes.details.msg
+        to: body
+        output: noop
+        
+      - id: moonraker_parser
+        type: regex_parser
+        parse_from: body
+        parse_to: attributes.code
+        regex: '^\[(?P<module>[^:\]]+)(:(?P<method>[^\]]+))?\] - .*$'
+        output: noop
+
+      - id: spoolman_parser
+        type: router
+        routes:
+          - expr: 'body matches "^[A-Z]+:\\s+\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ - "'
+            output: spoolman_request_parser
+          - expr: 'body matches "^[A-Z]+:\\s+"'
+            output: spoolman_log_line_parser
+          - expr: 'body matches "^[\\w_]+(\\.[\\w_]+)+\\s+[A-Z]+\\s+"'
+            output: spoolman_module_log_line_parser
+        default: noop
+      - id: spoolman_request_parser
+        type: regex_parser
+        parse_from: body
+        regex: '^(?P<level>[A-Z]+):\s+(?P<src_ip>\d+\.\d+\.\d+\.\d+):(?P<src_port>\d+) - "(?P<method>[A-Z]+) (?P<path>[^ ]+) (?P<http_version>HTTP/.+)" (?P<status_code>\d+) .*$'
+        severity:
+          parse_from: attributes.level
+        output: noop
+      - id: spoolman_log_line_parser
+        type: regex_parser
+        parse_from: body
+        regex: '^(?P<level>[A-Z]+):\s+(?P<message>.*)$'
+        severity:
+          parse_from: attributes.level
+      - type: move
+        from: attributes.message
+        to: body
+        output: noop
+      - id: spoolman_module_log_line_parser
+        type: regex_parser
+        parse_from: body
+        regex: '^(?P<module>[^ ]+)\s+(?P<level>[A-Z]+)\s+(?P<message>.*)$'
+        severity:
+          parse_from: attributes.level
+      - type: move
+        from: attributes.message
+        to: body
+        output: noop
+
+      - type: noop
+
+  # filelog/moonraker:
+  #   include:
+  #     - /printing/printer_data/logs/moonraker.log
+  #   multiline:
+  #     line_start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} '
+  #   operators:
+  #     - type: regex_parser
+  #       regex: '^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d{3} \[(?P<module>[^:]]+):(?P<method>[^\]]+)\] - (?P<body>.*)$'
+  #       timestamp:
+  #         parse_from: attributes.time
+  #         layout: '%Y-%m-%d %H:%M:%S'
+  #     - type: add
+  #       field: attributes['service.name']
+  #       value: moonraker
+  #     - type: move
+  #       field: attributes.module
+  #       to: attributes["code.module"]
+  #     - type: move
+  #       field: attributes.method
+  #       to: attributes["code.method"]
+  #     - type: add
+  #       field: attributes['level']
+  #       value: info
+  #     - type: severity_parser
+  #       parse_from: attributes.level
+
+  filelog/klippy:
+    include:
+      - /printing/printer_data/logs/klippy.log
+    multiline:
+      line_start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} '
+    operators:
+      - type: filter
+        expr: 'body matches "^Stats \\d+"'
+      - type: add
+        field: attributes['service.name']
+        value: klipper.service
+      - type: add
+        field: attributes['level']
+        value: info
+      - type: severity_parser
+        parse_from: attributes.level
+
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+        cpu_average: true
+      
+      memory:
+      network:
+      paging:
+      process:
+        mute_process_exe_error: true
+        metrics:
+          process.disk.io:
+            enabled: false
+
+processors:
+  batch:
+
+  resource:
+    attributes:
+      - key: tailscale.tag
+        value: printing
+        action: upsert
+
+  resourcedetection:
+    detectors: [env, system]
+
+  attributes/loki:
+    actions:
+      - key: loki.attribute.labels
+        value: service.name,process.exe,systemd.unit,process.groupid,process.userid
+        action: upsert
+
+  resource/loki:
+    attributes:
+      - key: loki.resource.labels
+        value: host.name
+        action: upsert
+
+  transform/metrics:
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["host.name"], resource.attributes["host.name"])
+          - set(attributes["process.cmdline"], resource.attributes["process.command_line"]) where resource.attributes["process.command_line"] != nil
+          - set(attributes["process.exe"], resource.attributes["process.command"]) where resource.attributes["process.command"] != nil
+          - set(attributes["process.exe"], resource.attributes["process.executable.name"]) where attributes["process.exe"] == nil and resource.attributes["process.executable.name"] != nil
+          - set(attributes["process.user"], resource.attributes["process.owner"]) where resource.attributes["process.owner"] != nil
+
+exporters:
+  loki/grafana:
+    endpoint: https://logs-prod-eu-west-0.grafana.net/api/prom/push
+    auth:
+      authenticator: basicauth/grafana/loki
+
+  prometheusremotewrite/grafana:
+    endpoint: https://prometheus-prod-01-eu-west-0.grafana.net/api/prom/push
+    auth:
+      authenticator: basicauth/grafana/prometheus
+
+  otlphttp/grafana:
+    endpoint: https://otlp-gateway-prod-eu-west-0.grafana.net/otlp
+    auth:
+      authenticator: basicauth/grafana/otlp
+
+service:
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resourcedetection, resource]
+      exporters: [otlphttp/grafana]
+
+    logs:
+      receivers: [otlp, journald, filelog/klippy]
+      processors: [batch, resourcedetection, resource, attributes/loki, resource/loki]
+      exporters: [loki/grafana]
+
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics]
+      processors: [batch, resourcedetection, resource, transform/metrics]
+      exporters: [prometheusremotewrite/grafana]
+
+  extensions: [file_storage, health_check, basicauth/grafana/loki, basicauth/grafana/prometheus, basicauth/grafana/otlp]
+

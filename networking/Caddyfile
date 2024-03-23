@@ -1,31 +1,41 @@
-localhost, voron.raptor-perch.ts.net
-
-root * /printing/mainsail
-encode gzip
-
-# Forward requests to the API server
-@api {
-        path /access/* || /api/* || /machine/* || /printer/* || /server/*
-}
-handle @api {
-        reverse_proxy http://localhost:7125
+{
+	servers {
+		metrics
+	}
 }
 
-handle /websocket {
-        reverse_proxy http://localhost:7125 {
-                header_up Host {host}
-                header_up X-Real-IP {remote_host}
-        }
-}
+localhost, voron.raptor-perch.ts.net {
+	root * /printing/mainsail
+	encode gzip
 
-handle_path /webcam/* {
-        reverse_proxy http://localhost:8080
-}
+	# Forward requests to the API server
+	@api {
+		path /access/* || /api/* || /machine/* || /printer/* || /server/*
+	}
+	handle @api {
+		tracing {
+			span api
+		}
 
-handle * {
-        # Disable caching of the index.html file
-        header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
+		reverse_proxy http://localhost:7125
+	}
 
-        try_files {path} {path}/ /index.html
-        file_server
+	handle /websocket {
+		reverse_proxy http://localhost:7125 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle_path /webcam/* {
+		reverse_proxy http://localhost:8294
+	}
+
+	handle {
+		# Disable caching of the index.html file
+		header /index.html ?Cache-Control "no-store, no-cache, must-revalidate"
+
+		try_files {path} {path}/ /index.html
+		file_server
+	}
 }

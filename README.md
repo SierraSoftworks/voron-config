@@ -30,13 +30,14 @@ git clone https://github.com/SierraSoftworks/voron-config /printing/voron-config
 This configuration assumes that your build reflects my own, including the following:
 
  - [Voron 2.4 R2](https://github.com/VoronDesign/Voron-2) (350mm)
- - BigTreeTech Pi v1.4
+ - Raspberry Pi 5 (4GB RAM)
  - BigTreeTech U2C v2.1
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB2240 v1.0
  - BigTreeTech Smart Filament Sensor v1.1
  - PT1000 (2 wire) hotend thermistor
  - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
+ - [Galileo 2](https://github.com/JaredC01/Galileo2)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
  - Tailscale for secure remote access.
@@ -59,17 +60,21 @@ This configuration assumes that your build reflects my own, including the follow
 
  - Chamber thermistor attached to `T0` on the Octopus (replacing the original hotend thermistor port).
 
-### Host Configuration
-The BigTreeTech Pi starts off running the stock CB1 image, which I have then reconfigured
-fairly substantially. This includes at least the following:
+ - LED chamber lighting connected to HE2 on the Octopus (24V supply at ~7-8W peak).
 
- - Moving all printing tooling and configuration to the `/printing` directory (from `/home/biqu`).
- - Migrating all printing agents to a new `printing` user, and creating a `printing` group for it.
- - Creating custom user accounts with membership to the `printing` group to better manage access permissions.
- - Installing Tailscale to provide network access to the printer, as well as secured SSH access.
- - Upgrading the OS to Debian 12 (Bookworm) to ensure we're running the latest stable packages.
- - Replacing NGINX with Caddy 2.0 as the reverse proxy for Mainsail, enabling the user of Tailscale+LetsEncrypt certs.
- - Setting up the `can0` network interface and configuring `systemd-network` to manage it.
+### Host Configuration
+Running Raspbian 12 (Bookworm) on a Raspberry Pi 5 (4GB RAM) with a 32GB SD card. There are a range of changes
+made to the way that this is installed relative to the "default" configuration.
+
+ - Using Tailscale for remote access to the printer.
+ - Have a dedicated `printing` user for all printing related tasks, home directory at `/printing`.
+ - Have a dedicated `printing` group for all printing related tasks, management users are members of this group.
+ - Installed Moonraker, Klipper, and Mainsail using Kiauh.
+ - Using Caddy 2.0 as a reverse proxy for Mainsail, with Tailscale issued certs.
+ - Using [Tailservice](https://sierrasoftworks.com/projects/tailservice) to expose Spoolman on Tailnet.
+ - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length.
+ - Manually installed and configured `ustreamer` since Crowsnest doesn't (yet) support the RPi 5.
+ - Installed and configured OpenTelemetry Collector to send realtime metrics and logs to Grafana.
 
 ### Klipper Firmware Configuration
 To setup the Klipper firmware, you'll need to compile it for each of the boards in your system.

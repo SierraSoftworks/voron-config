@@ -31,13 +31,14 @@ This configuration assumes that your build reflects my own, including the follow
 
  - [Voron 2.4 R2](https://github.com/VoronDesign/Voron-2) (350mm)
  - Raspberry Pi 5 (4GB RAM)
+ - BigTreeTech TFT50 v2.1 running KlipperScreen
  - BigTreeTech U2C v2.1
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB2240 v1.0
  - BigTreeTech Smart Filament Sensor v1.1
  - PT1000 (2 wire) hotend thermistor
  - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
- - [Galileo 2](https://github.com/JaredC01/Galileo2)
+ - [~~Galileo 2~~](https://github.com/JaredC01/Galileo2) (switched back to Clockwork 2 due to flow-rate limitations)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
  - Tailscale for secure remote access.

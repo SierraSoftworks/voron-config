@@ -38,7 +38,7 @@ This configuration assumes that your build reflects my own, including the follow
  - BigTreeTech Smart Filament Sensor v1.1
  - PT1000 (2 wire) hotend thermistor
  - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
- - [~~Galileo 2~~](https://github.com/JaredC01/Galileo2) (switched back to Clockwork 2 due to flow-rate limitations)
+ - [Galileo 2](https://github.com/JaredC01/Galileo2)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
  - Tailscale for secure remote access.

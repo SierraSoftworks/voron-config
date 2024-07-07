@@ -55,7 +55,7 @@ This configuration assumes that your build reflects my own, including the follow
 
  - Configuring the EBB2240 firmware to enable the `PA0` GPIO pin at startup (FAN1/heater fan) so that restarts don't run the risk of overheating the hotend.
 
- - Nevermore v6 connected to FAN4 on the Octopus (with jumpers set to 12V supply for Sunon Maglev 5015 fans).
+ - FILTER v6 connected to FAN4 on the Octopus (with jumpers set to 12V supply for Sunon Maglev 5015 fans).
 
  - Smart Filament Sensor connected to the `DIAG_7` (motion) and `DIAG_3` (presence) ports on the Octopus.
 
@@ -129,8 +129,8 @@ within a number of subdirectories.
  - `printer.cfg` contains the `[include]` statements for the aforementioned configs, as well as auto-generated overrides.
 
 ### Macros
- - `NEVERMORE SPEED=[0..1]` turns on the Nevermore at the requested speed (and resets any shutdown delay).
- - `NEVERMORE_OFF_AFTER SECONDS=900` turns off the Nevermore after the requested number of seconds (using delayed gcode).
+ - `FILTER SPEED=[0..1]` turns on the Nevermore at the requested speed (and resets any shutdown delay).
+ - `FILTER_OFF_AFTER SECONDS=900` turns off the Nevermore after the requested number of seconds (using delayed gcode).
 
 ### Post Installation Printer Setup
 

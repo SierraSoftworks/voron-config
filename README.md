@@ -89,7 +89,7 @@ you can run `make` to compile the firmware which will be placed in `out/klipper.
  - Bootloader offset: `32KiB`
  - Clock Reference: `12 MHz crystal`
  - Communication interface: `USB on PA11/PA12`
- - GPIO pins to set at micro-controller startup: `PB11`
+ - GPIO pins to set at micro-controller startup: `PB11` for EBB2240 or `PA1` for EBB36. **:warning: `PA1` is the bed heater pins :warning:**
 
  Once the firmware is built, place it on the SD card with the filename `firmware.bin` and insert it into the Octopus.
  A power cycle should then cause the Octopus to flash the firmware and reboot, at which point the firmware file will be

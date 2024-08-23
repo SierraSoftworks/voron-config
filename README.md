@@ -34,20 +34,20 @@ This configuration assumes that your build reflects my own, including the follow
  - BigTreeTech TFT50 v2.1 running KlipperScreen
  - BigTreeTech U2C v2.1
  - BigTreeTech Octopus v1.1
- - BigTreeTech EBB2240 v1.0
+ - BigTreeTech EBB36 v1.2
  - BigTreeTech Smart Filament Sensor v2.0
  - PT1000 (2 wire) hotend thermistor
- - [Voron Tap (R8)](https://github.com/VoronDesign/Voron-Tap)
+ - [Cartographer](https://cartographer3d.com)
  - [Galileo 2](https://github.com/JaredC01/Galileo2)
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
  - Tailscale for secure remote access.
 
 ### Printer Hardware Configuration
- - Powering the EBB2240 using the HE3 port on the Octopus, allowing us to use the Octopus' built in relay to disable power remotely in an emergency.
+ - Powering the EBB36 using the bed heater port on the Octopus, allowing us to use the Octopus' built in relay to disable power remotely in an emergency.
     
     **NOTE**: This requires that you compile the Octopus firmware with the `PB11` GPIO pin configured to be on at controller startup. If you do
-    not do this, Klipper will fail to start (waiting on the EBB2240 to start) and will not enable the pin. Careful that you don't connect a heater
+    not do this, Klipper will fail to start (waiting on the EBB36 to start) and will not enable the pin. Careful that you don't connect a heater
     there, as it will be on at all times!
 
  - Using MOTOR_6 for the B stepper (and MOTOR_0 for the A stepper) to avoid needing to replace the Formbot kit cable which was too short to allow
@@ -55,7 +55,7 @@ This configuration assumes that your build reflects my own, including the follow
 
  - Configuring the EBB2240 firmware to enable the `PA0` GPIO pin at startup (FAN1/heater fan) so that restarts don't run the risk of overheating the hotend.
 
- - FILTER v6 connected to FAN4 on the Octopus (with jumpers set to 12V supply for Sunon Maglev 5015 fans).
+ - FILTER (bed fans) connected to FAN5 on the Octopus.
 
  - Smart Filament Sensor connected to the `DIAG_7` (motion) and `DIAG_3` (presence) ports on the Octopus.
 
@@ -113,6 +113,27 @@ python3 flash_can.py -i can0 -q # Get the CAN ID of the EBB2240
 
 # Once you have the ID, run the following command to flash the firmware (with the ID replaced if needed)
 python3 ./flash_can.py -i can0 -f /printing/klipper/out/klipper.bin -u 9cf9505f7c7c
+```
+
+
+#### BTT EBB36
+ - Enable extra low-level configuration options
+ - Micro-processor architecture: `STM32`
+ - Processor model: `STM32G0B1`
+ - Bootloader offset: `8KiB`
+ - Clock Reference: `8 MHz crystal`
+ - Communication interface: `CAN bus on PB0/PB1`
+ - CAN bus speed: `1 Mbit/s` (1000000)
+ - GPIO pins to set at micro-controller startup: `PA0`
+
+Once the firmware is built, flash it using the CANboot tooling by running the following command:
+
+```bash
+cd /printing/canboot/scripts
+python3 flash_can.py -i can0 -q # Get the CAN ID of the EBB36
+
+# Once you have the ID, run the following command to flash the firmware (with the ID replaced if needed)
+python3 ./flash_can.py -i can0 -f /printing/klipper/out/klipper.bin -u a057f0d6cddd
 ```
 
 ### Klipper Configuration

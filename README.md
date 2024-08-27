@@ -150,8 +150,8 @@ within a number of subdirectories.
  - `printer.cfg` contains the `[include]` statements for the aforementioned configs, as well as auto-generated overrides.
 
 ### Macros
- - `FILTER SPEED=[0..1]` turns on the Nevermore at the requested speed (and resets any shutdown delay).
- - `FILTER_OFF_AFTER SECONDS=900` turns off the Nevermore after the requested number of seconds (using delayed gcode).
+ - `BED_FANS SPEED=[0..1]` turns on the bed fans at the requested speed (and resets any shutdown delay).
+ - `BED_FANS_OFF_AFTER SECONDS=900` turns off the bed fans after the requested number of seconds (using delayed gcode).
 
 ### Post Installation Printer Setup
 

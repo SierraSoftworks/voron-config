@@ -36,6 +36,7 @@ This configuration assumes that your build reflects my own, including the follow
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB36 v1.2
  - BigTreeTech Smart Filament Sensor v2.0
+ - TMC5160T drivers for A/B steppers (LDO 42STH48-2804AH SuperPower) at 1.4A
  - PT1000 (2 wire) hotend thermistor
  - [Cartographer](https://cartographer3d.com)
  - [Galileo 2](https://github.com/JaredC01/Galileo2)

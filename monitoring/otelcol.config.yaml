@@ -5,14 +5,6 @@ extensions:
   file_storage:
   health_check:
 
-  basicauth/grafana/loki:
-    client_auth:
-      username: <USERNAME>
-      password: <PASSWORD>
-  basicauth/grafana/prometheus:
-    client_auth:
-      username: <USERNAME>
-      password: <PASSWORD>
   basicauth/grafana/otlp:
     client_auth:
       username: <USERNAME>
@@ -29,32 +21,63 @@ receivers:
   prometheus:
     config:
       scrape_configs:
-      - job_name: 'integrations/caddy'
-        scrape_interval: 1m
-        static_configs:
-        - targets: ['127.0.0.1:2019']
-        relabel_configs:
-        - replacement: 'voron'
-          target_label: instance
-        metric_relabel_configs:
-        - action: keep
-          regex: caddy_http_request_duration_seconds_bucket|caddy_http_request_duration_seconds_count|caddy_http_requests_in_flight|caddy_http_requests_total
-          source_labels:
-          - __name__
+        - job_name: 'integrations/caddy'
+          scrape_interval: 1m
+          static_configs:
+            - targets: ['127.0.0.1:2019']
+          relabel_configs:
+            - replacement: 'voron'
+              target_label: instance
+          metric_relabel_configs:
+            - action: keep
+              regex: caddy_http_request_duration_seconds_bucket|caddy_http_request_duration_seconds_count|caddy_http_requests_in_flight|caddy_http_requests_total
+              source_labels:
+                - __name__
 
-  journald:
-    #directory: /run/log/journal
+        - job_name: 'klipper'
+          scrape_interval: 1m
+          metrics_path: /probe
+          static_configs:
+            - targets: ['127.0.0.1:7125']
+          params:
+            modules: [
+              "process_stats",
+              "job_queue",
+              "system_info",
+              "network_stats",
+              "directory_info",
+              "printer_objects",
+              "history",
+            ]
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - replacement: 'voron'
+              target_label: instance
+            - target_label: __address__
+              replacement: 127.0.0.1:9101
+
+        - job_name: 'spoolman'
+          scrape_interval: 1m
+          static_configs:
+            - targets: ['127.0.0.1:7912']
+          relabel_configs:
+            - replacement: 'voron'
+              target_label: instance
+
+  journald/default:
+    directory: /run/log/journal
     priority: info
     storage: file_storage
     units:
       - ssh
       - sudo
+      - backup.service
       - systemd
-      - tailscaled
-      - caddy
-      - klipper
+      - go2rtc
+      - mediamtx
       - moonraker
-      - spoolman
+      - prometheus-klipper-exporter
       - spoolman-tailservice
       - ustreamer
     operators:
@@ -66,200 +89,178 @@ receivers:
           warn: 4
           info: [5, 6]
           debug: 7
-      - type: move
-        from: body.SYSLOG_IDENTIFIER
-        to: attributes["process.cmd"]
-      - type: move
-        from: body.SYSLOG_FACILITY
-        to: attributes.facility
-        if: '"SYSLOG_FACILITY" in keys(body)'
 
       # Process Metadata
       - type: move
         from: body._SYSTEMD_UNIT
-        to: attributes["service.name"]
-      - type: move
-        from: body._EXE
-        to: attributes["process.exe"]
-        if: '"_EXE" in keys(body)'
-      - type: move
-        from: body._CMDLINE
-        to: attributes["process.cmdline"]
-        if: '"_CMDLINE" in keys(body)'
-      - type: move
-        from: body._PID
-        to: attributes["process.id"]
-        if: '"_PID" in keys(body)'
-      - type: move
-        from: body._UID
-        to: attributes["process.userid"]
-        if: '"_UID" in keys(body)'
-      - type: move
-        from: body._GID
-        to: attributes["process.groupid"]
-        if: '"_GID" in keys(body)'
-
-      # Cleanup unused fields
-      - type: remove
-        field: body.__CURSOR
-      - type: remove
-        field: body.PRIORITY
-      - type: remove
-        field: body.__MONOTONIC_TIMESTAMP
-      - type: remove
-        field: body.SYSLOG_TIMESTAMP
-        if: '"SYSLOG_TIMESTAMP" in keys(body)'
-      - type: remove
-        field: body._HOSTNAME
-
-      # Store extra metadata fields
-      # - type: copy
-      #   from: body
-      #   to: attributes.extra
-      # - type: remove
-      #   field: attributes.extra.MESSAGE
+        to: resource["service.name"]
 
       - type: move
         from: body.MESSAGE
         to: body
 
-      # Application specific parsing logic
-      - type: router
-        routes:
-          - expr: 'attributes["service.name"] == "tailscaled.service" and body matches "^(Accept|Drop): "'
-            output: tailscale_netflow_parser
-          - expr: 'attributes["service.name"] == "moonraker.service" and body matches "^\\[[^:]+:[^\\]]+\\] - "'
-            output: moonraker_parser
-          - expr: 'attributes["service.name"] == "caddy.service" and body matches "^\\{"'
-            output: caddy_parser
-          - expr: 'attributes["service.name"] == "spoolman.service"'
-            output: spoolman_parser
-        default: noop
-
-      - id: tailscale_netflow_parser
-        type: regex_parser
-        parse_from: body
-        parse_to: attributes.netflow
-        regex: '^(?P<action>Accept|Drop): (?P<protocol>\w+)\{(?P<src_ip>[^:]+):(?P<src_port>\d+) > (?P<dst_ip>[^:]+):(?P<dst_port>\d+)\} (?P<packet_length>\d+) (?P<reason>.+)$'
-        output: noop
-
-      - id: caddy_parser
-        type: json_parser
-        parse_from: body
-        parse_to: attributes.details
+  journald/caddy:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - caddy
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+      - type: json_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
         severity:
-          parse_from: attributes.details.level
+          parse_from: attributes.level
           mapping:
             fatal: fatal
             error: error
             warn: [warn, warning]
             info: info
             debug: [debug, verbose]
-      - type: add
-        field: attributes["service.name"]
-        value: caddy.service
       - type: remove
-        field: attributes.details.ts
-      - type: remove
-        field: attributes.details.level
+        field: attributes.ts
       - type: move
-        from: attributes.details.logger
-        to: attributes["code.module"]
-        if: '"logger" in keys(attributes.details)'
+        from: attributes.logger
+        to: attributes["scope.name"]
+        if: '"logger" in keys(attributes)'
       - type: move
-        from: attributes.details.msg
+        from: attributes.msg
         to: body
-        output: noop
-        
-      - id: moonraker_parser
-        type: regex_parser
-        parse_from: body
-        parse_to: attributes.code
-        regex: '^\[(?P<module>[^:\]]+)(:(?P<method>[^\]]+))?\] - .*$'
-        output: noop
 
-      - id: spoolman_parser
-        type: router
-        routes:
-          - expr: 'body matches "^[A-Z]+:\\s+\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ - "'
-            output: spoolman_request_parser
-          - expr: 'body matches "^[A-Z]+:\\s+"'
-            output: spoolman_log_line_parser
-          - expr: 'body matches "^[\\w_]+(\\.[\\w_]+)+\\s+[A-Z]+\\s+"'
-            output: spoolman_module_log_line_parser
-        default: noop
-      - id: spoolman_request_parser
-        type: regex_parser
-        parse_from: body
-        regex: '^(?P<level>[A-Z]+):\s+(?P<src_ip>\d+\.\d+\.\d+\.\d+):(?P<src_port>\d+) - "(?P<method>[A-Z]+) (?P<path>[^ ]+) (?P<http_version>HTTP/.+)" (?P<status_code>\d+) .*$'
+  journald/klipper:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - klipper
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+      - type: recombine
+        combine_field: body.MESSAGE
+        is_first_entry: 'body.MESSAGE matches "^[A-Z]+:"'
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
+        regex: '^(?P<level>[A-Z]+):(?P<logger>[^:\s]+):(?P<module>[^\s]+) (?P<message>.*)$'
         severity:
           parse_from: attributes.level
-        output: noop
-      - id: spoolman_log_line_parser
-        type: regex_parser
-        parse_from: body
-        regex: '^(?P<level>[A-Z]+):\s+(?P<message>.*)$'
-        severity:
-          parse_from: attributes.level
+          mapping:
+            fatal: FATAL
+            error: ERROR
+            warn: [WARNING, WARN]
+            info: INFO
+            debug: DEBUG
       - type: move
         from: attributes.message
         to: body
-        output: noop
-      - id: spoolman_module_log_line_parser
-        type: regex_parser
-        parse_from: body
-        regex: '^(?P<module>[^ ]+)\s+(?P<level>[A-Z]+)\s+(?P<message>.*)$'
-        severity:
-          parse_from: attributes.level
+      - type: filter
+        expr: 'attributes["module"] == "Stats" or attributes["module"] == "toolhead"'
+      - type: move
+        from: attributes.module
+        to: resource["code.module"]
+        if: '"module" in keys(attributes)'
+      - type: move
+        from: attributes.logger
+        to: resource["code.function"]
+        if: '"logger" in keys(attributes)'
+
+  journald/klipperscreen:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - KlipperScreen
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+      - type: recombine
+        combine_field: body.MESSAGE
+        is_first_entry: 'body.MESSAGE matches "^\\d{8} \\d{2}:\\d{2}:\\d{2},\\d{3}"'
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
+        regex: '^(?P<time>\d{8} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<module>[^:]+):(?P<function>[^\]]+)\] - (?P<message>.*)$'
       - type: move
         from: attributes.message
         to: body
-        output: noop
+      - type: move
+        from: attributes.module
+        to: resource["code.module"]
+        if: '"module" in keys(attributes)'
+      - type: move
+        from: attributes.function
+        to: resource["code.function"]
+        if: '"function" in keys(attributes)'
 
-      - type: noop
-
-  # filelog/moonraker:
-  #   include:
-  #     - /printing/printer_data/logs/moonraker.log
-  #   multiline:
-  #     line_start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} '
-  #   operators:
-  #     - type: regex_parser
-  #       regex: '^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d{3} \[(?P<module>[^:]]+):(?P<method>[^\]]+)\] - (?P<body>.*)$'
-  #       timestamp:
-  #         parse_from: attributes.time
-  #         layout: '%Y-%m-%d %H:%M:%S'
-  #     - type: add
-  #       field: attributes['service.name']
-  #       value: moonraker
-  #     - type: move
-  #       field: attributes.module
-  #       to: attributes["code.module"]
-  #     - type: move
-  #       field: attributes.method
-  #       to: attributes["code.method"]
-  #     - type: add
-  #       field: attributes['level']
-  #       value: info
-  #     - type: severity_parser
-  #       parse_from: attributes.level
-
-  filelog/klippy:
-    include:
-      - /printing/printer_data/logs/klippy.log
-    multiline:
-      line_start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} '
+  journald/spoolman:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - spoolman
     operators:
       - type: filter
-        expr: 'body matches "^Stats \\d+"'
-      - type: add
-        field: attributes['service.name']
-        value: klipper.service
-      - type: add
-        field: attributes['level']
-        value: info
-      - type: severity_parser
-        parse_from: attributes.level
+        expr: "body.MESSAGE matches \"^INFO:\\\\s+127.0.0.1:\\\\d+ - .*\" or body.MESSAGE matches \"^\\\\('127.0.0.1', \\\\d+\\\\) - .*\" or body.MESSAGE matches \"^connection (open|closed)$\""
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+      - type: recombine
+        combine_field: body.MESSAGE
+        is_first_entry: 'body.MESSAGE matches "^[A-Z]+:"'
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
+        regex: '^(?P<level>[A-Z]+): (?P<message>.*)$'
+        severity:
+          parse_from: attributes.level
+          mapping:
+            fatal: FATAL
+            error: ERROR
+            warn: [WARNING, WARN]
+            info: INFO
+            debug: DEBUG
+      - type: move
+        from: attributes.message
+        to: body
+
+  journald/tailscaled:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - tailscaled
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+      - type: move
+        from: body.MESSAGE
+        to: body
+      - type: router
+        routes:
+          - expr: 'resource["service.name"] == "tailscaled.service" and body matches "^(Accept|Drop): "'
+            output: tailscale_netflow_parser
+        default: noop
+      - id: tailscale_netflow_parser
+        type: regex_parser
+        parse_from: body
+        parse_to: attributes.netflow
+        regex: '^(?P<action>Accept|Drop): (?P<protocol>\w+)\{(?P<src_ip>[^:]+):(?P<src_port>\d+) > (?P<dst_ip>[^:]+):(?P<dst_port>\d+)\} (?P<packet_length>\d+) (?P<reason>.+)$'
+      - type: noop
 
   hostmetrics:
     collection_interval: 30s
@@ -269,7 +270,7 @@ receivers:
       filesystem:
       load:
         cpu_average: true
-      
+
       memory:
       network:
       paging:
@@ -291,45 +292,30 @@ processors:
   resourcedetection:
     detectors: [env, system]
 
-  attributes/loki:
-    actions:
-      - key: loki.attribute.labels
-        value: service.name,process.exe,systemd.unit,process.groupid,process.userid
-        action: upsert
-
-  resource/loki:
-    attributes:
-      - key: loki.resource.labels
-        value: host.name
-        action: upsert
-
   transform/metrics:
     metric_statements:
       - context: datapoint
         statements:
-          - set(attributes["host.name"], resource.attributes["host.name"])
+          - set(attributes["host.name"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
           - set(attributes["process.cmdline"], resource.attributes["process.command_line"]) where resource.attributes["process.command_line"] != nil
           - set(attributes["process.exe"], resource.attributes["process.command"]) where resource.attributes["process.command"] != nil
           - set(attributes["process.exe"], resource.attributes["process.executable.name"]) where attributes["process.exe"] == nil and resource.attributes["process.executable.name"] != nil
           - set(attributes["process.user"], resource.attributes["process.owner"]) where resource.attributes["process.owner"] != nil
 
 exporters:
-  loki/grafana:
-    endpoint: https://logs-prod-eu-west-0.grafana.net/api/prom/push
-    auth:
-      authenticator: basicauth/grafana/loki
-
-  prometheusremotewrite/grafana:
-    endpoint: https://prometheus-prod-01-eu-west-0.grafana.net/api/prom/push
-    auth:
-      authenticator: basicauth/grafana/prometheus
-
   otlphttp/grafana:
     endpoint: https://otlp-gateway-prod-eu-west-0.grafana.net/otlp
     auth:
       authenticator: basicauth/grafana/otlp
 
 service:
+  telemetry:
+    metrics:
+      level: none
+    logs:
+      level: ERROR
+      encoding: json
+      disable_stacktrace: true
 
   pipelines:
     traces:
@@ -338,14 +324,20 @@ service:
       exporters: [otlphttp/grafana]
 
     logs:
-      receivers: [otlp, journald, filelog/klippy]
-      processors: [batch, resourcedetection, resource, attributes/loki, resource/loki]
-      exporters: [loki/grafana]
+      receivers:
+        - otlp
+        - journald/caddy
+        - journald/default
+        - journald/klipper
+        - journald/klipperscreen
+        - journald/spoolman
+        - journald/tailscaled
+      processors: [batch, resourcedetection, resource]
+      exporters: [otlphttp/grafana]
 
     metrics:
       receivers: [otlp, prometheus, hostmetrics]
       processors: [batch, resourcedetection, resource, transform/metrics]
-      exporters: [prometheusremotewrite/grafana]
+      exporters: [otlphttp/grafana]
 
-  extensions: [file_storage, health_check, basicauth/grafana/loki, basicauth/grafana/prometheus, basicauth/grafana/otlp]
-
+  extensions: [file_storage, health_check, basicauth/grafana/otlp]

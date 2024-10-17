@@ -223,7 +223,7 @@ receivers:
       - spoolman
     operators:
       - type: filter
-        expr: "body.MESSAGE matches \"^INFO:\\\\s+127.0.0.1:\\\\d+ - .*\" or body.MESSAGE matches \"^\\\\('127.0.0.1', \\\\d+\\\\) - .*\" or body.MESSAGE matches \"^connection (open|closed)$\""
+        expr: "body.MESSAGE matches \"^INFO:\\\\s+127.0.0.1:\\\\d+ - .*\" or body.MESSAGE matches \"^\\\\s*\\\\('127.0.0.1', \\\\d+\\\\) - .*\" or body.MESSAGE matches \"^\\\\s*connection (open|closed)$\""
       - type: move
         from: body._SYSTEMD_UNIT
         to: resource["service.name"]
@@ -366,4 +366,3 @@ service:
       exporters: [otlphttp/grafana]
 
   extensions: [file_storage, health_check, basicauth/grafana/otlp]
-  

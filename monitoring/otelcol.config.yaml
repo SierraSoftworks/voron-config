@@ -100,6 +100,31 @@ receivers:
         from: body.MESSAGE
         to: body
 
+  journald/dmesg:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    dmesg: true
+    operators:
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+
+      # Process Metadata
+      - type: add
+        field: resource["service.name"]
+        value: kernel
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
   journald/caddy:
     directory: /run/log/journal
     priority: info
@@ -202,7 +227,7 @@ receivers:
       - type: regex_parser
         parse_from: body.MESSAGE
         parse_to: attributes
-        regex: '^(?P<time>\d{8} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<module>[^:]+):(?P<function>[^\]]+)\] - (?P<message>.*)$'
+        regex: '^(?P<time>\d{8} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<module>[^:]+):(?P<function>[^\]]+)\] - (?P<message>[\w\W]*)$'
       - type: move
         from: attributes.message
         to: body
@@ -233,7 +258,7 @@ receivers:
       - type: regex_parser
         parse_from: body.MESSAGE
         parse_to: attributes
-        regex: '^(?P<level>[A-Z]+): (?P<message>.*)$'
+        regex: '^(?P<level>[A-Z]+): (?P<message>[\w\W]*)$'
         severity:
           parse_from: attributes.level
           mapping:
@@ -353,6 +378,7 @@ service:
         - otlp
         - journald/caddy
         - journald/default
+        - journald/dmesg
         - journald/klipper
         - journald/klipperscreen
         - journald/spoolman

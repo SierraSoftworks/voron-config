@@ -141,14 +141,18 @@ receivers:
     operators:
       - type: move
         from: body._SYSTEMD_UNIT
-        to: resource["service.name"]
+        to: 'resource["service.name"]'
+      - type: move
+        from: body.MESSAGE
+        to: body
       - type: recombine
-        combine_field: body.MESSAGE
-        is_first_entry: 'body.MESSAGE matches "^[A-Z]+:"'
+        combine_field: body
+        is_first_entry: 'body matches "^[A-Z]+:.*"'
+        on_error: drop_quiet
       - type: regex_parser
-        parse_from: body.MESSAGE
+        parse_from: body
         parse_to: attributes
-        regex: '^(?P<level>[A-Z]+):(?P<logger>[^:\s]+):(?P<module>[^\s]+) (?P<message>.*)$'
+        regex: '^(?P<level>[A-Z]+):(?P<logger>[^:]+):(?P<module>[^:]+): (?P<message>[\w\W]*)$'
         severity:
           parse_from: attributes.level
           mapping:
@@ -161,8 +165,9 @@ receivers:
       - type: move
         from: attributes.message
         to: body
+        if: '"message" in keys(attributes)'
       - type: filter
-        expr: 'attributes["module"] == "Stats" or attributes["module"] == "toolhead"'
+        expr: 'attributes["module"] matches "^Stats" or attributes["module"] == "toolhead"'
       - type: move
         from: attributes.module
         to: resource["code.module"]
@@ -237,7 +242,7 @@ receivers:
             warn: [WARNING, WARN]
             info: INFO
             debug: DEBUG
-        overwrite_text: true
+          overwrite_text: true
       - type: move
         from: attributes.message
         to: body
@@ -361,3 +366,4 @@ service:
       exporters: [otlphttp/grafana]
 
   extensions: [file_storage, health_check, basicauth/grafana/otlp]
+  

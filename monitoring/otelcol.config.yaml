@@ -89,6 +89,7 @@ receivers:
           warn: 4
           info: [5, 6]
           debug: 7
+        overwrite_text: true
 
       # Process Metadata
       - type: move
@@ -120,6 +121,7 @@ receivers:
             warn: [warn, warning]
             info: info
             debug: [debug, verbose]
+          overwrite_text: true
       - type: remove
         field: attributes.ts
       - type: move
@@ -155,6 +157,7 @@ receivers:
             warn: [WARNING, WARN]
             info: INFO
             debug: DEBUG
+          overwrite_text: true
       - type: move
         from: attributes.message
         to: body
@@ -187,6 +190,7 @@ receivers:
           warn: 4
           info: [5, 6]
           debug: 7
+        overwrite_text: true
       - type: recombine
         combine_field: body.MESSAGE
         is_first_entry: 'body.MESSAGE matches "^\\d{8} \\d{2}:\\d{2}:\\d{2},\\d{3}"'
@@ -233,6 +237,7 @@ receivers:
             warn: [WARNING, WARN]
             info: INFO
             debug: DEBUG
+        overwrite_text: true
       - type: move
         from: attributes.message
         to: body
@@ -247,6 +252,15 @@ receivers:
       - type: move
         from: body._SYSTEMD_UNIT
         to: resource["service.name"]
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
       - type: move
         from: body.MESSAGE
         to: body
@@ -292,6 +306,12 @@ processors:
   resourcedetection:
     detectors: [env, system]
 
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["level"], severity_text)
+
   transform/metrics:
     metric_statements:
       - context: datapoint
@@ -332,7 +352,7 @@ service:
         - journald/klipperscreen
         - journald/spoolman
         - journald/tailscaled
-      processors: [batch, resourcedetection, resource]
+      processors: [batch, resourcedetection, resource, transform/logs]
       exporters: [otlphttp/grafana]
 
     metrics:

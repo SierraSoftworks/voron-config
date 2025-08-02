@@ -9,9 +9,9 @@ CONFIG_DIR="${CONFIG_DIR:-$PRINTING_HOME/printer_data/config}"
 
 # Check if the mainsail-config directory exists and hasn't (yet) been linked
 if [ -d "$PRINTING_HOME/mainsail-config" ]; then
-    if [ ! -L "$SOURCE_DIR/v2/klipper/mainsail.cfg" ]; then
+    if [ ! -L "$SOURCE_DIR/klipper/mainsail.cfg" ]; then
         echo -n "[FIX] Linking mainsail-config to klipper config... "
-        ln -s "$PRINTING_HOME/mainsail-config/client.cfg" "$SOURCE_DIR/v2/klipper/mainsail.cfg" && echo "OK" || echo "FAILED"
+        ln -s "$PRINTING_HOME/mainsail-config/client.cfg" "$SOURCE_DIR/klipper/mainsail.cfg" && echo "OK" || echo "FAILED"
     else
         echo "[OK] mainsail-config already linked to klipper config"
     fi
@@ -19,9 +19,9 @@ fi
 
 # Check if the moonraker-timelapse directory exists and hasn't (yet) been linked
 if [ -d "$PRINTING_HOME/moonraker-timelapse" ]; then
-    if [ ! -L "$SOURCE_DIR/v2/klipper/timelapse.cfg" ]; then
+    if [ ! -L "$SOURCE_DIR/klipper/timelapse.cfg" ]; then
         echo -n "[FIX] Linking moonraker-timelapse to klipper config... "
-        ln -s "$PRINTING_HOME/moonraker-timelapse/klipper_macro/timelapse.cfg" "$SOURCE_DIR/v2/klipper/timelapse.cfg" && echo "OK" || echo "FAILED"
+        ln -s "$PRINTING_HOME/moonraker-timelapse/klipper_macro/timelapse.cfg" "$SOURCE_DIR/klipper/timelapse.cfg" && echo "OK" || echo "FAILED"
     else
         echo "[OK] moonraker-timelapse already linked to klipper config"
     fi

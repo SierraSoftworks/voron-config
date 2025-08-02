@@ -1,0 +1,3 @@
+# Not supported on mainline Kalico
+[input_shaper]
+enabled_extruders: extruder

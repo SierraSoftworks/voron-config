@@ -2,9 +2,9 @@
 [include config.cfg]
 #[include timelapse.cfg]
 
-[include controllers/*.cfg]
+[include addons/*.cfg]
 [include display/*.cfg]
-[include effectors/*.cfg]
+[include motors/*.cfg]
 [include features/*.cfg]
 [include macros/*.cfg]
 

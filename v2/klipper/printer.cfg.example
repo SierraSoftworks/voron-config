@@ -2,11 +2,11 @@
 [include config.cfg]
 #[include timelapse.cfg]
 
-[include controllers/_index.cfg]
-[include display/_index.cfg]
-[include effectors/_index.cfg]
-[include features/_index.cfg]
-[include macros/_index.cfg]
+[include controllers/*.cfg]
+[include display/*.cfg]
+[include effectors/*.cfg]
+[include features/*.cfg]
+[include macros/*.cfg]
 
 [probe]
 z_offset: 0

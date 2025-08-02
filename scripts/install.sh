@@ -48,40 +48,46 @@ if [ ! -f "$SOURCE_DIR/klipper/printer.cfg" ]; then
 fi
 
 # Setup go2rtc service
-if [ ! -L "$PRINTING_HOME/go2rtc" ]; then
-    echo -n "[FIX] Linking go2rtc... "
-    ln -s "$SOURCE_DIR/services/go2rtc" "$PRINTING_HOME/go2rtc" && echo "OK" || echo "FAILED"
+if [ ! -d "$PRINTING_HOME/go2rtc" ]; then
+    echo -n "[FIX] Installing go2rtc... "
+    mkdir -p "$PRINTING_HOME/go2rtc"
+    cp -r "$SOURCE_DIR/services/go2rtc/"* "$PRINTING_HOME/go2rtc/" && echo "OK" || echo "FAILED"
+    wget -O "$PRINTING_HOME/go2rtc/go2rtc_linux_arm64" "https://github.com/AlexxIT/go2rtc/releases/download/v1.9.4/go2rtc_linux_arm64" && echo "go2rtc binary downloaded" || echo "FAILED to download go2rtc binary"
+    chmod +x "$PRINTING_HOME/go2rtc/go2rtc_linux_arm64"
 else
-    echo "[OK] go2rtc already linked"
+    echo "[OK] go2rtc already installed"
 fi
 
 if [ ! -L "/etc/systemd/system/go2rtc.service" ]; then
-    echo -n "[FIX] Linking go2rtc service... "
+    echo -n "[FIX] Linking go2rtc.service... "
     sudo ln -s "$SOURCE_DIR/services/go2rtc/go2rtc.service" "/etc/systemd/system/go2rtc.service" && echo "OK" || echo "FAILED"
 
     sudo systemctl daemon-reload
     sudo systemctl enable go2rtc.service
     sudo systemctl restart go2rtc.service
 else
-    echo "[OK] go2rtc service already linked"
+    echo "[OK] go2rtc.service already linked"
 fi
 
 # Setup tailservice
-if [ ! -L "$PRINTING_HOME/spoolman-tailservice" ]; then
-    echo -n "[FIX] Linking spoolman-tailservice... "
-    ln -s "$SOURCE_DIR/services/spoolman-tailservice" "$PRINTING_HOME/spoolman-tailservice" && echo "OK" || echo "FAILED"
+if [ ! -d "$PRINTING_HOME/spoolman-tailservice" ]; then
+    echo -n "[FIX] Installing spoolman-tailservice... "
+    mkdir -p "$PRINTING_HOME/spoolman-tailservice"
+    cp -r "$SOURCE_DIR/services/spoolman-tailservice/"* "$PRINTING_HOME/spoolman-tailservice/" && echo "OK" || echo "FAILED"
+    wget -O "$PRINTING_HOME/spoolman-tailservice/tailservice-linux-arm64" "https://github.com/SierraSoftworks/tailservice/releases/download/v1.0.6/tailservice-linux-arm64" && echo "tailservice binary downloaded" || echo "FAILED to download tailservice binary"
+    chmod +x "$PRINTING_HOME/spoolman-tailservice/tailservice-linux-arm64"
 else
-    echo "[OK] spoolman-tailservice already linked"
+    echo "[OK] spoolman-tailservice already installed"
 fi
 
 if [ ! -L "/etc/systemd/system/spoolman-tailservice.service" ]; then
-    echo -n "[FIX] Linking spoolman-tailservice service... "
+    echo -n "[FIX] Linking spoolman-tailservice.service... "
     sudo ln -s "$SOURCE_DIR/services/spoolman-tailservice/spoolman-tailservice.service" "/etc/systemd/system/spoolman-tailservice.service" && echo "OK" || echo "FAILED"
     sudo systemctl daemon-reload
     sudo systemctl enable spoolman-tailservice.service
     sudo systemctl restart spoolman-tailservice.service
 else
-    echo "[OK] spoolman-tailservice service already linked"
+    echo "[OK] spoolman-tailservice.service already linked"
 fi
 
 echo "[OK] Setup complete"

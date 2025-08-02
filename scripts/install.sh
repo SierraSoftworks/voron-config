@@ -36,14 +36,14 @@ if [ ! -L "$CONFIG_DIR" ]; then
     fi
 
     echo -n "[FIX] Linking klipper config... "
-    ln -s "$SOURCE_DIR/v2/klipper" "$CONFIG_DIR" && echo "OK" || echo "FAILED"
+    ln -s "$SOURCE_DIR/klipper" "$CONFIG_DIR" && echo "OK" || echo "FAILED"
 else
     echo "[OK] klipper config already linked"
 fi
 
-if [ ! -f "$SOURCE_DIR/v2/klipper/printer.cfg" ]; then
+if [ ! -f "$SOURCE_DIR/klipper/printer.cfg" ]; then
     echo -n "[FIX] Creating printer.cfg... "
-    cp "$SOURCE_DIR/v2/klipper/printer.cfg.example" "$SOURCE_DIR/v2/klipper/printer.cfg" && echo "OK" || echo "FAILED"
+    cp "$SOURCE_DIR/klipper/printer.cfg.example" "$SOURCE_DIR/klipper/printer.cfg" && echo "OK" || echo "FAILED"
     echo "Remember to modify printer.cfg to match your printer's configuration if changes are required."
 fi
 

@@ -27,8 +27,17 @@ localhost, voron.raptor-perch.ts.net {
 		}
 	}
 
-	handle_path /webcam/* {
-		reverse_proxy http://localhost:8294
+	@cam {
+		path /webcam || /webcam/* || /webcam2 || /webcam2/* || /cam
+	}
+
+	handle @cam {
+		# go2rtc
+		reverse_proxy http://localhost:1984
+		# MediaMTX HLS
+		#reverse_proxy http://localhost:8887
+		# MediaMTX WebRTC
+		#reverse_proxy http://localhost:8889
 	}
 
 	handle {

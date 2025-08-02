@@ -1,0 +1,6 @@
+{
+  "project_name":"prometheus-klipper-exporter",
+  "project_owner":"scross01",
+  "version":"v0.12.0",
+  "asset_name":"prometheus-klipper-exporter-rpi-arm64"
+}

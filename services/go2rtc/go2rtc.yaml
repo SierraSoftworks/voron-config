@@ -1,0 +1,18 @@
+api:
+  listen: ":1984"
+  base_path: /webcam
+
+webrtc:
+  listen: ":8889"
+  candidates:
+    - voron.raptor-perch.ts.net:8889
+    - 100.106.86.79
+    - 192.168.103.55
+
+rtsp:
+  listen: ':8554'
+  default_query: 'video=h264'
+
+streams:
+  # ffmpeg -f v4l2 -input_format mjpeg -s:v 1280x720 -i /dev/v4l/by-id/usb-SHENZHEN_AONI_ELECTRONIC_CO.__LTD_HD720P_Webcam_AN202101130002-video-index0 -c:v libx264 -crf 18 -vf "hflip,vflip,fps=30" -preset ultrafast -tune zerolatency -movflags +faststart -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+  webcam: ffmpeg:device?video=/dev/v4l/by-id/usb-SHENZHEN_AONI_ELECTRONIC_CO.__LTD_HD720P_Webcam_AN202101130002-video-index0&input_format=mjpeg&video_size=960x540&framerate=20#video=h264#rotate=180#raw=-crf 18 -movflags +faststart -preset ultrafast -tune zerolatency

@@ -1,0 +1,16 @@
+[Unit]
+Description=Prometheus exporter for Klipper.
+After=moonraker.service
+StartLimitBurst=6
+StartLimitIntervalSec=5
+
+[Service]
+User=printing
+WorkingDirectory=/printing/prometheus-klipper
+EnvironmentFile=/printing/prometheus-klipper/prometheus-klipper-exporter.env
+ExecStart=/printing/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64 -logging.level Warning
+Restart=always
+RestartSec=1s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=A webcam streaming server which allows access to the printer video feed.
+
+[Service]
+Type=simple
+ExecStart=/printing/go2rtc/go2rtc_linux_arm64
+WorkingDirectory=/printing/go2rtc
+User=printing
+Restart=always
+
+[Install]
+WantedBy=default.target

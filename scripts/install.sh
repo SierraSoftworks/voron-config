@@ -57,11 +57,11 @@ fi
 
 if [ ! -L "/etc/systemd/system/go2rtc.service" ]; then
     echo -n "[FIX] Linking go2rtc service... "
-    ln -s "$SOURCE_DIR/services/go2rtc/go2rtc.service" "/etc/systemd/system/go2rtc.service" && echo "OK" || echo "FAILED"
+    sudo ln -s "$SOURCE_DIR/services/go2rtc/go2rtc.service" "/etc/systemd/system/go2rtc.service" && echo "OK" || echo "FAILED"
 
-    systemctl daemon-reload
-    systemctl enable go2rtc.service
-    systemctl restart go2rtc.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable go2rtc.service
+    sudo systemctl restart go2rtc.service
 else
     echo "[OK] go2rtc service already linked"
 fi
@@ -76,10 +76,10 @@ fi
 
 if [ ! -L "/etc/systemd/system/spoolman-tailservice.service" ]; then
     echo -n "[FIX] Linking spoolman-tailservice service... "
-    ln -s "$SOURCE_DIR/services/tailservice/spoolman-tailservice.service" "/etc/systemd/system/spoolman-tailservice.service" && echo "OK" || echo "FAILED"
-    systemctl daemon-reload
-    systemctl enable spoolman-tailservice.service
-    systemctl restart spoolman-tailservice.service
+    sudo ln -s "$SOURCE_DIR/services/spoolman-tailservice/spoolman-tailservice.service" "/etc/systemd/system/spoolman-tailservice.service" && echo "OK" || echo "FAILED"
+    sudo systemctl daemon-reload
+    sudo systemctl enable spoolman-tailservice.service
+    sudo systemctl restart spoolman-tailservice.service
 else
     echo "[OK] spoolman-tailservice service already linked"
 fi

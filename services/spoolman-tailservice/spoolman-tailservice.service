@@ -8,5 +8,5 @@ WantedBy=multi-user.target
 [Service]
 Type=simple
 User=printing
-WorkingDirectory=/printing/tailservice
-ExecStart=/printing/tailservice/tailservice-linux-arm64 --name spoolman --tls 443:http://127.0.0.1:7912 --tcp 80:http://127.0.0.1:7912 --tcp 7912:http://127.0.0.1:7912
+WorkingDirectory=/printing/spoolman-tailservice
+ExecStart=/printing/spoolman-tailservice/tailservice-linux-arm64 --name spoolman --tls 443:http://127.0.0.1:7912 --tcp 80:http://127.0.0.1:7912 --tcp 7912:http://127.0.0.1:7912

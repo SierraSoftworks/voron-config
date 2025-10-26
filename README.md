@@ -46,7 +46,7 @@ This configuration assumes that your build reflects my own, including the follow
 
 ### Printer Hardware Configuration
  - Powering the EBB36 using the bed heater port on the Octopus, allowing us to use the Octopus' built in relay to disable power remotely in an emergency.
-    
+
     **NOTE**: This requires that you compile the Octopus firmware with the `PB11` GPIO pin configured to be on at controller startup. If you do
     not do this, Klipper will fail to start (waiting on the EBB36 to start) and will not enable the pin. Careful that you don't connect a heater
     there, as it will be on at all times!
@@ -92,9 +92,17 @@ you can run `make` to compile the firmware which will be placed in `out/klipper.
  - Communication interface: `USB on PA11/PA12`
  - GPIO pins to set at micro-controller startup: `PB11` for EBB2240 or `PA1` for EBB36. **:warning: `PA1` is the bed heater pins :warning:**
 
- Once the firmware is built, place it on the SD card with the filename `firmware.bin` and insert it into the Octopus.
- A power cycle should then cause the Octopus to flash the firmware and reboot, at which point the firmware file will be
- renamed to `firmware.cur`.
+Once the firmware is built, place it on the SD card with the filename `firmware.bin` and insert it into the Octopus.
+A power cycle should then cause the Octopus to flash the firmware and reboot, at which point the firmware file will be
+renamed to `firmware.cur`.
+
+Alternatively, you can use `make flash` to flash the firmware directly to the board without using an SD card.
+
+```bash
+systemctl stop klipper
+make flash FLASH_DEVICE=/dev/serial/by-id/usb-Klipper_stm32f446xx_380018000751313133353932-if00
+systemctl start klipper
+```
 
 #### BTT EBB2240
  - Enable extra low-level configuration options
@@ -184,4 +192,4 @@ SAVE_CONFIG # Save the new z_offset value
 ```
 
 #### Input Shaper Tuning
-Once you've configured 
+Once you've configured

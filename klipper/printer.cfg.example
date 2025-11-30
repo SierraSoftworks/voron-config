@@ -1,13 +1,19 @@
+# Include your printer config here first
+[include printers/sierra-2.4r2/*.cfg]
+
 [include mainsail.cfg]
 [include config.cfg]
 #[include timelapse.cfg]
 
 [include addons/*.cfg]
-[include display/*.cfg]
-[include motors/*.cfg]
 [include features/*.cfg]
 [include macros/*.cfg]
+[include mcus/*.cfg]
+[include outputs/*.cfg]
+[include screen/*.cfg]
+[include sensors/*.cfg]
 
+# Default values for these fields so that they can be updated by Klipper
 [probe]
 z_offset: 0
 

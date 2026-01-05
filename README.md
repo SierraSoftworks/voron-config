@@ -36,7 +36,7 @@ This configuration assumes that your build reflects my own, including the follow
  - BigTreeTech Octopus v1.1
  - BigTreeTech EBB36 v1.2
  - BigTreeTech Smart Filament Sensor v2.0
- - TMC5160T drivers for A/B steppers (LDO 42STH48-2804AH SuperPower) at 1.4A
+ - TMC5160T drivers for A/B steppers (LDO 42STH48-2504AH SpeedyPower HT) at 1.4A
  - PT1000 (2 wire) hotend thermistor
  - [Cartographer](https://cartographer3d.com)
  - [Galileo 2](https://github.com/JaredC01/Galileo2)
@@ -51,8 +51,7 @@ This configuration assumes that your build reflects my own, including the follow
     not do this, Klipper will fail to start (waiting on the EBB36 to start) and will not enable the pin. Careful that you don't connect a heater
     there, as it will be on at all times!
 
- - Using MOTOR_6 for the B stepper (and MOTOR_0 for the A stepper) to avoid needing to replace the Formbot kit cable which was too short to allow
-   nice cable management.
+ - Using MOTOR_0 for the A stepper and MOTOR_1 for the B stepper to make the arrangement easier for me to remember logically.
 
  - Configuring the EBB2240 firmware to enable the `PA0` GPIO pin at startup (FAN1/heater fan) so that restarts don't run the risk of overheating the hotend.
 

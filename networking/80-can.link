@@ -1,0 +1,12 @@
+# CAN link configuration, applied by systemd-udevd/networkd when the interface
+# appears. A long transmit queue avoids dropped frames when Klipper bursts
+# commands to the toolhead board.
+#
+# Place this file in /etc/systemd/network/80-can.link
+# (see 80-can.network for the matching network file).
+
+[Match]
+OriginalName=can*
+
+[Link]
+TransmitQueueLength=1024

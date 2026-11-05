@@ -43,6 +43,7 @@ This configuration assumes that your build reflects my own, including the follow
  - [Nevermore Micro v6](https://github.com/nevermore3d/Nevermore_Micro)
  - Klipper + Mainsail installed under `/printing`.
  - Tailscale for secure remote access.
+ - (My own printer has these host-level pieces applied by [Buckle](https://github.com/SierraSoftworks/buckle) from [infra-buckle](https://github.com/SierraSoftworks/infra-buckle); nothing here depends on it.)
 
 ### Printer Hardware Configuration
  - Powering the EBB36 using the bed heater port on the Octopus, allowing us to use the Octopus' built in relay to disable power remotely in an emergency.
@@ -73,9 +74,9 @@ made to the way that this is installed relative to the "default" configuration.
  - Installed Moonraker, Klipper, and Mainsail using Kiauh.
  - Using Caddy 2.0 as a reverse proxy for Mainsail, with Tailscale issued certs.
  - Using [Tailservice](https://sierrasoftworks.com/projects/tailservice) to expose Spoolman on Tailnet.
- - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length.
+ - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length (`networking/80-can.link` and `networking/80-can.network` for systemd-networkd; `networking/can0` is the ifupdown equivalent).
  - Manually installed and configured `ustreamer` since Crowsnest doesn't (yet) support the RPi 5.
- - OpenTelemetry Collector (`otelcol-contrib`) installed and configured by Buckle (the `otelcol-agent` module in [infra-buckle](https://github.com/SierraSoftworks/infra-buckle)), shipping logs and metrics to the cluster collector.
+ - Installed and configured the OpenTelemetry Collector (`otelcol-contrib`) to ship Klipper, Moonraker and host logs and metrics to my collector; the configuration is in `monitoring/otelcol.config.yaml`.
 
 ### Klipper Firmware Configuration
 To setup the Klipper firmware, you'll need to compile it for each of the boards in your system.

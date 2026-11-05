@@ -1,0 +1,423 @@
+# voron's local OpenTelemetry Collector (/etc/otelcol-contrib/config.yaml).
+#
+# This is the configuration that runs on the printer. Install otelcol-contrib
+# from https://github.com/open-telemetry/opentelemetry-collector-releases and
+# drop this file in place; `systemctl restart otelcol-contrib` picks it up.
+#
+# Gathers this host's telemetry (journald logs, host/printer metrics) and
+# forwards everything over OTLP to the cluster collector at
+# telemetry.sierrasoftworks.com, which owns the heavyweight parsing and the
+# fan-out to Loki/Mimir/Tempo, Honeycomb, and Grafana Cloud.
+#
+# Contract with the upstream collector (see the otelcol pack in
+# SierraSoftworks/nomad-pack-registry):
+#   - Locally-collected logs are stamped with resource["log.source"]
+#     (journald/kernel) so the upstream Honeycomb branch groups them into
+#     per-source datasets instead of minting one dataset per systemd unit.
+#     Logs received over OTLP are NOT stamped — they belong to real services
+#     which keep their own service.name (and dataset).
+#   - An attributes["log.format"] tag opts a log stream into the upstream
+#     parsing rules (e.g. caddy) instead of parsing here. Formats upstream
+#     doesn't know (klipper, klipperscreen, spoolman) are still parsed
+#     locally, as are filters that must run before shipping.
+#   - Locally-parsed severity is exposed as attributes["level"], which the
+#     upstream severity normalization reads back after its own parsing.
+
+extensions:
+  file_storage:
+  health_check:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4317
+      http:
+        endpoint: 127.0.0.1:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'integrations/caddy'
+          scrape_interval: 1m
+          static_configs:
+            - targets: ['127.0.0.1:2019']
+          relabel_configs:
+            - replacement: 'voron'
+              target_label: instance
+          metric_relabel_configs:
+            - action: keep
+              regex: caddy_http_request_duration_seconds_bucket|caddy_http_request_duration_seconds_count|caddy_http_requests_in_flight|caddy_http_requests_total
+              source_labels:
+                - __name__
+
+        - job_name: 'klipper'
+          scrape_interval: 1m
+          metrics_path: /probe
+          static_configs:
+            - targets: ['127.0.0.1:7125']
+          params:
+            modules: [
+              "process_stats",
+              "job_queue",
+              "system_info",
+              "network_stats",
+              "directory_info",
+              "printer_objects",
+              "history",
+            ]
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - replacement: 'voron'
+              target_label: instance
+            - target_label: __address__
+              replacement: 127.0.0.1:9101
+
+        - job_name: 'spoolman'
+          scrape_interval: 1m
+          static_configs:
+            - targets: ['127.0.0.1:7912']
+          relabel_configs:
+            - replacement: 'voron'
+              target_label: instance
+
+  journald/default:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - ssh
+      - sudo
+      - backup
+      - systemd
+      - go2rtc
+      - mediamtx
+      - moonraker
+      - prometheus-klipper-exporter
+      - spoolman-tailservice
+      - ustreamer
+    operators:
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+
+      # Process Metadata
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+
+      # Marks the ingestion source; the upstream Honeycomb branch datasets
+      # logs by it instead of service.name.
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+  journald/dmesg:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    dmesg: true
+    operators:
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+
+      # Process Metadata
+      - type: add
+        field: resource["service.name"]
+        value: kernel
+
+      - type: add
+        field: resource["log.source"]
+        value: kernel
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+  journald/caddy:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - caddy
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      # Caddy writes zap-style JSON to stdout; ship it raw and let the
+      # upstream collector's caddy rules parse severity/ts/logger.
+      - type: add
+        field: attributes["log.format"]
+        value: caddy
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+  journald/klipper:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - klipper
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: 'resource["service.name"]'
+
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+      - type: recombine
+        combine_field: body
+        is_first_entry: 'body matches "^[A-Z]+:.*"'
+        on_error: drop_quiet
+      - type: regex_parser
+        parse_from: body
+        parse_to: attributes
+        regex: '^(?P<level>[A-Z]+):(?P<logger>[^:]+):(?P<module>[^:]+): (?P<message>[\w\W]*)$'
+        severity:
+          parse_from: attributes.level
+          mapping:
+            fatal: FATAL
+            error: ERROR
+            warn: [WARNING, WARN]
+            info: INFO
+            debug: DEBUG
+          overwrite_text: true
+      - type: move
+        from: attributes.message
+        to: body
+        if: '"message" in keys(attributes)'
+      # Drops the periodic Stats/toolhead spam before it leaves the host.
+      - type: filter
+        expr: 'attributes["module"] matches "^Stats" or attributes["module"] == "toolhead"'
+      - type: move
+        from: attributes.module
+        to: resource["code.module"]
+        if: '"module" in keys(attributes)'
+      - type: move
+        from: attributes.logger
+        to: resource["code.function"]
+        if: '"logger" in keys(attributes)'
+
+  journald/klipperscreen:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - KlipperScreen
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+      - type: recombine
+        combine_field: body.MESSAGE
+        is_first_entry: 'body.MESSAGE matches "^\\d{8} \\d{2}:\\d{2}:\\d{2},\\d{3}"'
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
+        regex: '^(?P<time>\d{8} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<module>[^:]+):(?P<function>[^\]]+)\] - (?P<message>[\w\W]*)$'
+      - type: move
+        from: attributes.message
+        to: body
+      - type: move
+        from: attributes.module
+        to: resource["code.module"]
+        if: '"module" in keys(attributes)'
+      - type: move
+        from: attributes.function
+        to: resource["code.function"]
+        if: '"function" in keys(attributes)'
+
+  journald/spoolman:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - spoolman
+    operators:
+      # Drops the per-request access-log spam before it leaves the host.
+      - type: filter
+        expr: "body.MESSAGE matches \"^INFO:\\\\s+127.0.0.1:\\\\d+ - .*\" or body.MESSAGE matches \"^\\\\s*\\\\('127.0.0.1', \\\\d+\\\\) - .*\" or body.MESSAGE matches \"^\\\\s*connection (open|closed)$\""
+
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: recombine
+        combine_field: body.MESSAGE
+        is_first_entry: 'body.MESSAGE matches "^[A-Z]+:"'
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        parse_to: attributes
+        regex: '^(?P<level>[A-Z]+): (?P<message>[\w\W]*)$'
+        severity:
+          parse_from: attributes.level
+          mapping:
+            fatal: FATAL
+            error: ERROR
+            warn: [WARNING, WARN]
+            info: INFO
+            debug: DEBUG
+          overwrite_text: true
+      - type: move
+        from: attributes.message
+        to: body
+
+  journald/tailscaled:
+    directory: /run/log/journal
+    priority: info
+    storage: file_storage
+    units:
+      - tailscaled
+    operators:
+      - type: move
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+
+      # Netflow (Accept:/Drop:) lines are parsed upstream, keyed off the
+      # tailscaled.service service.name.
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+        cpu_average: true
+
+      memory:
+      network:
+      paging:
+      process:
+        mute_process_exe_error: true
+        metrics:
+          process.disk.io:
+            enabled: false
+
+processors:
+  batch:
+
+  resource:
+    attributes:
+      - key: tailscale.tag
+        value: printing
+        action: upsert
+
+  resourcedetection:
+    detectors: [env, system]
+
+  # Expose locally-parsed severity as the level attribute; the upstream
+  # collector rebuilds severity_text/severity_number from it after running
+  # its own parsing rules.
+  transform/logs:
+    error_mode: ignore
+    log_statements:
+      - statements:
+          - set(log.attributes["level"], log.severity_text) where log.severity_text != ""
+
+exporters:
+  # The cluster collector (Caddy in front of its OTLP HTTP port; no auth).
+  # It fans out to Loki/Mimir/Tempo, Honeycomb, and Grafana Cloud, so
+  # nothing is exported from here directly.
+  otlphttp/sierrasoftworks:
+    endpoint: https://telemetry.sierrasoftworks.com
+
+service:
+  telemetry:
+    metrics:
+      level: none
+    logs:
+      level: ERROR
+      encoding: json
+      disable_stacktrace: true
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, resource, batch]
+      exporters: [otlphttp/sierrasoftworks]
+
+    logs:
+      receivers:
+        - otlp
+        - journald/caddy
+        - journald/default
+        - journald/dmesg
+        - journald/klipper
+        - journald/klipperscreen
+        - journald/spoolman
+        - journald/tailscaled
+      processors: [resourcedetection, resource, transform/logs, batch]
+      exporters: [otlphttp/sierrasoftworks]
+
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics]
+      processors: [resourcedetection, resource, batch]
+      exporters: [otlphttp/sierrasoftworks]
+
+  extensions: [file_storage, health_check]

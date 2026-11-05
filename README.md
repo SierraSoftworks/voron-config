@@ -75,7 +75,7 @@ made to the way that this is installed relative to the "default" configuration.
  - Using [Tailservice](https://sierrasoftworks.com/projects/tailservice) to expose Spoolman on Tailnet.
  - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length.
  - Manually installed and configured `ustreamer` since Crowsnest doesn't (yet) support the RPi 5.
- - Installed and configured OpenTelemetry Collector to send realtime metrics and logs to Grafana.
+ - OpenTelemetry Collector (`otelcol-contrib`) installed and configured by Buckle (the `otelcol-agent` module in [infra-buckle](https://github.com/SierraSoftworks/infra-buckle)), shipping logs and metrics to the cluster collector.
 
 ### Klipper Firmware Configuration
 To setup the Klipper firmware, you'll need to compile it for each of the boards in your system.

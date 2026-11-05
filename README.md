@@ -65,17 +65,22 @@ This configuration assumes that your build reflects my own, including the follow
  - LED chamber lighting connected to HE2 on the Octopus (24V supply at ~7-8W peak).
 
 ### Host Configuration
-Running Raspbian 12 (Bookworm) on a Raspberry Pi 5 (4GB RAM) with a 32GB SD card. There are a range of changes
+Running Raspberry Pi OS 13 (Trixie) on a Raspberry Pi 5 (4GB RAM) with a 32GB SD card. There are a range of changes
 made to the way that this is installed relative to the "default" configuration.
 
  - Using Tailscale for remote access to the printer.
  - Have a dedicated `printing` user for all printing related tasks, home directory at `/printing`.
  - Have a dedicated `printing` group for all printing related tasks, management users are members of this group.
  - Installed Moonraker, Klipper, and Mainsail using Kiauh.
- - Using Caddy 2.0 as a reverse proxy for Mainsail, with Tailscale issued certs.
+ - Using Caddy 2 as a reverse proxy for Mainsail, Moonraker and the webcam, with Tailscale issued certs:
+   - installed from the [cloudsmith apt repository](https://caddyserver.com/docs/install#debian-ubuntu-raspbian);
+   - `/etc/caddy/Caddyfile` is a symlink to `networking/Caddyfile`, and `/etc/systemd/system/caddy.service.d/override.conf` to `services/caddy/override.conf` (OTLP tracing to the local collector);
+   - `TS_PERMIT_CERT_UID=caddy` in `/etc/default/tailscaled` lets Caddy fetch the tailnet certificate;
+   - `/etc/hosts` maps the printer's tailnet name to `127.0.0.1` so Caddy's site matches locally too.
  - Using [Tailservice](https://sierrasoftworks.com/projects/tailservice) to expose Spoolman on Tailnet.
  - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length (`networking/80-can.link` and `networking/80-can.network` for systemd-networkd; `networking/can0` is the ifupdown equivalent).
- - Manually installed and configured `ustreamer` since Crowsnest doesn't (yet) support the RPi 5.
+ - Using [go2rtc](https://github.com/AlexxIT/go2rtc) for the chamber webcam (`services/go2rtc/`, kept current by Moonraker's update manager), served through Caddy under `/webcam`.
+ - Exporting Klipper metrics with [prometheus-klipper-exporter](https://github.com/scross01/prometheus-klipper-exporter) (`services/prometheus-klipper-exporter/`, also updated by Moonraker), scraped by the local collector.
  - Installed and configured the OpenTelemetry Collector (`otelcol-contrib`) to ship Klipper, Moonraker and host logs and metrics to my collector; the configuration is in `monitoring/otelcol.config.yaml`.
 
 ### Klipper Firmware Configuration

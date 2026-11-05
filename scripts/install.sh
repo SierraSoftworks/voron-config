@@ -90,4 +90,44 @@ else
     echo "[OK] spoolman-tailservice.service already linked"
 fi
 
+# Setup the Prometheus exporter for Klipper (moonraker's update_manager keeps the binary current)
+if [ ! -d "$PRINTING_HOME/prometheus-klipper" ]; then
+    echo -n "[FIX] Installing prometheus-klipper-exporter... "
+    mkdir -p "$PRINTING_HOME/prometheus-klipper"
+    cp -r "$SOURCE_DIR/services/prometheus-klipper-exporter/"* "$PRINTING_HOME/prometheus-klipper/" && echo "OK" || echo "FAILED"
+    wget -O "$PRINTING_HOME/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64" "https://github.com/scross01/prometheus-klipper-exporter/releases/download/v0.12.0/prometheus-klipper-exporter-rpi-arm64" && echo "prometheus-klipper-exporter binary downloaded" || echo "FAILED to download prometheus-klipper-exporter binary"
+    chmod +x "$PRINTING_HOME/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64"
+else
+    echo "[OK] prometheus-klipper-exporter already installed"
+fi
+
+if [ ! -L "/etc/systemd/system/prometheus-klipper-exporter.service" ]; then
+    echo -n "[FIX] Linking prometheus-klipper-exporter.service... "
+    sudo ln -s "$SOURCE_DIR/services/prometheus-klipper-exporter/prometheus-klipper-exporter.service" "/etc/systemd/system/prometheus-klipper-exporter.service" && echo "OK" || echo "FAILED"
+    sudo systemctl daemon-reload
+    sudo systemctl enable prometheus-klipper-exporter.service
+    sudo systemctl restart prometheus-klipper-exporter.service
+else
+    echo "[OK] prometheus-klipper-exporter.service already linked"
+fi
+
+# Caddy: the Caddyfile and the tracing drop-in come from this repository
+if [ -d /etc/caddy ]; then
+    if [ ! -L /etc/caddy/Caddyfile ]; then
+        echo -n "[FIX] Linking Caddyfile... "
+        sudo ln -sf "$SOURCE_DIR/networking/Caddyfile" /etc/caddy/Caddyfile && echo "OK" || echo "FAILED"
+    else
+        echo "[OK] Caddyfile already linked"
+    fi
+    if [ ! -L /etc/systemd/system/caddy.service.d/override.conf ]; then
+        echo -n "[FIX] Linking caddy.service.d/override.conf... "
+        sudo mkdir -p /etc/systemd/system/caddy.service.d
+        sudo ln -sf "$SOURCE_DIR/services/caddy/override.conf" /etc/systemd/system/caddy.service.d/override.conf && echo "OK" || echo "FAILED"
+        sudo systemctl daemon-reload
+        sudo systemctl restart caddy
+    else
+        echo "[OK] caddy.service.d/override.conf already linked"
+    fi
+fi
+
 echo "[OK] Setup complete"

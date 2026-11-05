@@ -69,12 +69,14 @@ else
     echo "[OK] go2rtc.service already linked"
 fi
 
-# Setup the Prometheus exporter for Klipper (moonraker's update_manager keeps the binary current)
+# Setup the Prometheus exporter for Klipper. Its release assets carry the version in
+# their name, which Moonraker's update_manager cannot match, so the version is pinned here.
+KLIPPER_EXPORTER_VERSION="${KLIPPER_EXPORTER_VERSION:-0.16.0}"
 if [ ! -d "$PRINTING_HOME/prometheus-klipper" ]; then
     echo -n "[FIX] Installing prometheus-klipper-exporter... "
     mkdir -p "$PRINTING_HOME/prometheus-klipper"
     cp -r "$SOURCE_DIR/services/prometheus-klipper-exporter/"* "$PRINTING_HOME/prometheus-klipper/" && echo "OK" || echo "FAILED"
-    wget -O "$PRINTING_HOME/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64" "https://github.com/scross01/prometheus-klipper-exporter/releases/download/v0.12.0/prometheus-klipper-exporter-rpi-arm64" && echo "prometheus-klipper-exporter binary downloaded" || echo "FAILED to download prometheus-klipper-exporter binary"
+    wget -O "$PRINTING_HOME/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64" "https://github.com/scross01/prometheus-klipper-exporter/releases/download/v${KLIPPER_EXPORTER_VERSION}/prometheus-klipper-exporter-rpi-arm64-v${KLIPPER_EXPORTER_VERSION}" && echo "prometheus-klipper-exporter binary downloaded" || echo "FAILED to download prometheus-klipper-exporter binary"
     chmod +x "$PRINTING_HOME/prometheus-klipper/prometheus-klipper-exporter-rpi-arm64"
 else
     echo "[OK] prometheus-klipper-exporter already installed"

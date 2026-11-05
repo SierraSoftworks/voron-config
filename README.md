@@ -76,11 +76,11 @@ made to the way that this is installed relative to the "default" configuration.
    - installed from the [cloudsmith apt repository](https://caddyserver.com/docs/install#debian-ubuntu-raspbian);
    - `/etc/caddy/Caddyfile` is a symlink to `networking/Caddyfile`, and `/etc/systemd/system/caddy.service.d/override.conf` to `services/caddy/override.conf` (OTLP tracing to the local collector);
    - `TS_PERMIT_CERT_UID=caddy` in `/etc/default/tailscaled` lets Caddy fetch the tailnet certificate;
-   - `/etc/hosts` maps the printer's tailnet name to `127.0.0.1` so Caddy's site matches locally too.
- - Using [Tailservice](https://sierrasoftworks.com/projects/tailservice) to expose Spoolman on Tailnet.
+   - `/etc/hosts` maps the printer's tailnet name to `127.0.0.1` so Caddy's site matches locally too, and `spoolman.raptor-perch.ts.net` likewise so Moonraker's `[spoolman] server` URL reaches the local Spoolman on port 7912 (the Tailscale Service only publishes 443).
+ - Publishing Spoolman on the tailnet as the Tailscale Service `svc:spoolman` with `tailscale serve --service=svc:spoolman --https=443 http://127.0.0.1:7912` (plus `tailscale advertise --services=svc:spoolman`).
  - Configuring the `can0` network interface to run at 1Mbit/s with a 1k TX queue length (`networking/80-can.link` and `networking/80-can.network` for systemd-networkd; `networking/can0` is the ifupdown equivalent).
  - Using [go2rtc](https://github.com/AlexxIT/go2rtc) for the chamber webcam (`services/go2rtc/`, kept current by Moonraker's update manager), served through Caddy under `/webcam`.
- - Exporting Klipper metrics with [prometheus-klipper-exporter](https://github.com/scross01/prometheus-klipper-exporter) (`services/prometheus-klipper-exporter/`, also updated by Moonraker), scraped by the local collector.
+ - Exporting Klipper metrics with [prometheus-klipper-exporter](https://github.com/scross01/prometheus-klipper-exporter) (`services/prometheus-klipper-exporter/`; pinned in `scripts/install.sh`, since its versioned asset names defeat Moonraker's executable updater), scraped by the local collector.
  - Installed and configured the OpenTelemetry Collector (`otelcol-contrib`) to ship Klipper, Moonraker and host logs and metrics to my collector; the configuration is in `monitoring/otelcol.config.yaml`.
 
 ### Klipper Firmware Configuration

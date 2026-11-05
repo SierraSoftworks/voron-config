@@ -1,0 +1,20 @@
+# CAN network configuration, applied by systemd-networkd to every CAN interface
+# on the system. It brings the interface up at the bitrate the toolhead boards
+# are flashed for (1 Mbit/s).
+#
+# RequiredForOnline=no keeps a missing or unpowered CAN interface from holding
+# up network-online.target (useful while debugging CAN issues). The transmit
+# queue length lives in 80-can.link, which is applied when the link appears.
+#
+# Place this file in /etc/systemd/network/80-can.network
+# (see 80-can.link for the matching link file).
+
+[Match]
+Name=can*
+
+[CAN]
+BitRate=1000000
+RestartSec=0
+
+[Link]
+RequiredForOnline=no

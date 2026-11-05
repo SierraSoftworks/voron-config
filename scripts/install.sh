@@ -69,27 +69,6 @@ else
     echo "[OK] go2rtc.service already linked"
 fi
 
-# Setup tailservice
-if [ ! -d "$PRINTING_HOME/spoolman-tailservice" ]; then
-    echo -n "[FIX] Installing spoolman-tailservice... "
-    mkdir -p "$PRINTING_HOME/spoolman-tailservice"
-    cp -r "$SOURCE_DIR/services/spoolman-tailservice/"* "$PRINTING_HOME/spoolman-tailservice/" && echo "OK" || echo "FAILED"
-    wget -O "$PRINTING_HOME/spoolman-tailservice/tailservice-linux-arm64" "https://github.com/SierraSoftworks/tailservice/releases/download/v1.0.6/tailservice-linux-arm64" && echo "tailservice binary downloaded" || echo "FAILED to download tailservice binary"
-    chmod +x "$PRINTING_HOME/spoolman-tailservice/tailservice-linux-arm64"
-else
-    echo "[OK] spoolman-tailservice already installed"
-fi
-
-if [ ! -L "/etc/systemd/system/spoolman-tailservice.service" ]; then
-    echo -n "[FIX] Linking spoolman-tailservice.service... "
-    sudo ln -s "$SOURCE_DIR/services/spoolman-tailservice/spoolman-tailservice.service" "/etc/systemd/system/spoolman-tailservice.service" && echo "OK" || echo "FAILED"
-    sudo systemctl daemon-reload
-    sudo systemctl enable spoolman-tailservice.service
-    sudo systemctl restart spoolman-tailservice.service
-else
-    echo "[OK] spoolman-tailservice.service already linked"
-fi
-
 # Setup the Prometheus exporter for Klipper (moonraker's update_manager keeps the binary current)
 if [ ! -d "$PRINTING_HOME/prometheus-klipper" ]; then
     echo -n "[FIX] Installing prometheus-klipper-exporter... "
